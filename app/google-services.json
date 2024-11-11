@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "814340757102",
+    "project_id": "yamen-rock-cs",
+    "storage_bucket": "yamen-rock-cs.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:814340757102:android:9e5e056db7a90c3c52b87f",
+        "android_client_info": {
+          "package_name": "com.example.computerapp_aboalrock"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2Xtilt-eFxVkmgLLFvfl9o1Iw7_I7Pnw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
