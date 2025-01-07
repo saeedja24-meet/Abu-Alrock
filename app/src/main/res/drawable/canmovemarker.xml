@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Radial Gradient with white at the edges and transparent in the center -->
+    <gradient
+        android:type="radial"
+        android:gradientRadius="75%"
+        android:endColor="#FF7003"
+        android:centerColor="#00FFFFFF"
+        android:useLevel="false" />
+
+    <!-- Optional rounded corners -->
+    <corners android:radius="5dp" />
+</shape>

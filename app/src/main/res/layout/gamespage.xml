@@ -30,7 +30,7 @@
             android:layout_columnWeight="1"
             android:adjustViewBounds="true"
             android:scaleType="centerInside"
-            android:src="@drawable/connect4" />
+            android:src="@drawable/connect4logo" />
 
         <Button
             android:layout_rowWeight="1"
@@ -58,7 +58,7 @@
                 android:layout_columnWeight="1"
                 android:adjustViewBounds="true"
                 android:scaleType="fitXY"
-                android:src="@drawable/connect4" />
+                android:src="@drawable/connect4logo" />
             <TextView
                 android:layout_row="0"
                 android:layout_rowWeight="1"
