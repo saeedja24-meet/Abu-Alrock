@@ -22,6 +22,12 @@ public class Square {
         this.context = context;
     }
 
+    public void removeAllMarkers(){
+        removePieceCanMoveMarker();
+        removeSquarePossibleMoveMarkerColor();
+    }
+
+
     public int getId() {
         return id;
     }
@@ -50,11 +56,13 @@ public class Square {
         frameLayout.addView(piece.getPieceButton());
     }
 
-    public void removePiece() {
+    public Piece removePiece() {
+        Piece piece= this.piece;
         if (this.piece != null) {
             frameLayout.removeView(this.piece.getPieceButton());
             this.piece = null;
         }
+        return piece;
     }
 
     /** Mark this square as a possible landing square (for moves/jumps). */

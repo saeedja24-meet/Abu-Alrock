@@ -16,8 +16,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.computerapp_aboalrock.R; // Import your R file
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A basic Checkers activity with code that handles board setup, movement, and
@@ -29,17 +31,16 @@ public class Checkers extends AppCompatActivity {
     private List<Square> chessBoardSquares;
 
     // Parametric board definitions
-    public static final int boardSquaresNumber = 64;         // total squares
-    public static final int boardSideLength    = (int) Math.sqrt(boardSquaresNumber);
+    public static final int boardSquaresNumber = 100;         // total squares
+    public static final int boardSideLength = (int) Math.sqrt(boardSquaresNumber);
     public static final ArrayList<Integer> directions = new ArrayList<>();
     public static final ArrayList<Piece> whiteMen = new ArrayList<>();
     public static final ArrayList<Piece> blackMen = new ArrayList<>();
-    public static final ArrayList<Piece> whiteKings = new ArrayList<>();
-    public static final ArrayList<Piece> blackKings = new ArrayList<>();
-    private static final boolean menCanEatBackward = true;
+    public static final ArrayList<JumpNode> currentJumpsNode = new ArrayList<>();
+    private static final boolean menCanEatBackward = false;
     public static final boolean flyingKings = true;
+    public static boolean forcedPieceBiggestJumpSequence=true;
     public static final boolean kingChooseWhereToLandAfterJump = true;
-
 
 
     private boolean isBlackTurn = true; // false => White's turn initially
@@ -49,8 +50,7 @@ public class Checkers extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.checkers);  //checkers XML layout
         if (directions.isEmpty()) {
-            directions.add(boardSideLength-1);// 7 for 8x8 board
-            directions.add(boardSideLength+1);// 9 for 8x8 board
+            directions.addAll(Arrays.asList(-boardSideLength,boardSideLength,1,-1));
         }
     }
 
@@ -60,32 +60,32 @@ public class Checkers extends AppCompatActivity {
 
         chessBoardGridLayout = findViewById(R.id.whiteBackgroundGridLayout);
         chessBoardSquares = new ArrayList<>();
-        /**
-            * Here we Add the directions where piece can move eg.:
-            * diagonally up=boardSideLength+1 and boardSideLength-1)
-         *  Forward = boardSideLength
-         *  Down = -boardSideLength
-         *  Right = 1
-         *  Left = -1setUsedMoveDirection
-         *
-         *  those are all the required movements, if the piece goes up or down will be decided by multiplying
-         *  this ArrayList by 1 or -1, 1 for WhitePieces and -1 for Black ones
-            * direction.add(boardSideLength-1);
+        /*Here we Add the directions where piece can move eg.:
+          diagonally up=boardSideLength+1 and boardSideLength-1)
+           Forward = boardSideLength
+           Down = -boardSideLength
+           Right = 1
+           Left = -1setUsedMoveDirection
+           those are all the required movements, if the piece goes up or down will be decided by multiplying
+           this ArrayList by 1 or -1, 1 for WhitePieces and -1 for Black ones
+          direction.add(boardSideLength-1);
          */
 
         // Wait for the layout to size itself
         chessBoardGridLayout.post(() -> {
-            int gridWidth  = chessBoardGridLayout.getWidth();
+            int gridWidth = chessBoardGridLayout.getWidth();
             int gridHeight = chessBoardGridLayout.getHeight();
 
             // Each cell dimension (parametric)
-            int cellWidth  = gridWidth  / boardSideLength;
+            int cellWidth = gridWidth / boardSideLength;
             int cellHeight = gridHeight / boardSideLength;
 
             chessBoardGridLayout.removeAllViews();
             chessBoardSquares.clear();
             whiteMen.clear();
             blackMen.clear();
+            chessBoardGridLayout.setColumnCount(boardSideLength);
+            chessBoardGridLayout.setRowCount(boardSideLength);
 
             // Populate the board squares
             for (int i = 0; i < boardSquaresNumber; i++) {
@@ -109,17 +109,16 @@ public class Checkers extends AppCompatActivity {
                 // Place initial pieces
                 if (darkSquare && i < boardSideLength * (boardSideLength / 2 - 1)) {
                     // White piece on top rows
-                    Piece whiteCheckerPiece = new Piece(i,false, R.drawable.whitecheckerpiece, this,this);
+                    Piece whiteCheckerPiece = new Piece(i, false, R.drawable.whitecheckerpiece, this, this);
                     ArrayList<Integer> moveDirections = new ArrayList<>();
 
-                    for (Integer direction :directions){
-                        moveDirections.add(direction);
-                    }
+                    moveDirections.addAll(directions);
+
                     whiteCheckerPiece.setUsedMoveDirection(moveDirections);
                     ArrayList<Integer> jumpDirections = new ArrayList<>(moveDirections); // [9,7]
 
                     if (menCanEatBackward) {
-                        for (Integer direction : directions){
+                        for (Integer direction : directions) {
                             jumpDirections.add(direction * -1); // Adds -9,-7
                         }
                     }
@@ -130,20 +129,18 @@ public class Checkers extends AppCompatActivity {
 
                 } else if (darkSquare && i >= boardSideLength * (boardSideLength / 2 + 1)) {
                     // Black piece on bottom rows
-                    Piece blackCheckerPiece = new Piece(i,true, R.drawable.blackcheckerpiece, this,this);
+                    Piece blackCheckerPiece = new Piece(i, true, R.drawable.blackcheckerpiece, this, this);
 
                     ArrayList<Integer> moveDirections = new ArrayList<>();
-                    for (Integer direction :directions){
-                        moveDirections.add(direction*-1);
+                    for (Integer direction : directions) {
+                        moveDirections.add(direction * -1);
                     }
                     blackCheckerPiece.setUsedMoveDirection(moveDirections);
 
                     ArrayList<Integer> blackJumpDirections = new ArrayList<>(moveDirections); // [-9,-7]
 
                     if (menCanEatBackward) {
-                        for (Integer direction : directions){
-                            blackJumpDirections.add(direction); // Adds 9,7
-                        }
+                        blackJumpDirections.addAll(directions); // Adds 9,7
                     }
 
                     blackCheckerPiece.setJumpDirection(blackJumpDirections);
@@ -153,10 +150,10 @@ public class Checkers extends AppCompatActivity {
 
                 // Layout params
                 GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-                params.rowSpec    = GridLayout.spec(i / boardSideLength);
+                params.rowSpec = GridLayout.spec(i / boardSideLength);
                 params.columnSpec = GridLayout.spec(i % boardSideLength);
-                params.width      = cellWidth;
-                params.height     = cellHeight;
+                params.width = cellWidth;
+                params.height = cellHeight;
                 frameLayout.setLayoutParams(params);
 
                 chessBoardGridLayout.addView(frameLayout);
@@ -183,58 +180,39 @@ public class Checkers extends AppCompatActivity {
      * Called after a piece completes a move or jump. Flips the turn and re-highlights.
      */
     public void nextTurn() {
+        if (blackMen.isEmpty()||whiteMen.isEmpty()) Toast.makeText(this, "Game Over"+(isBlackTurn?"Black":"White")+" Won", Toast.LENGTH_SHORT).show();
         isBlackTurn = !isBlackTurn;
         manageMovement(isBlackTurn);
     }
 
 
-
     private boolean availableMenJumps(boolean isBlackTurn) {
         ArrayList<Piece> pieces = isBlackTurn ? blackMen : whiteMen;
-        ArrayList<Piece> opposedPieces = isBlackTurn ?  whiteMen:blackMen ;
-        ArrayList<Piece> piecesThatCanJump = new ArrayList<>();
-        HashMap<Piece, HashMap<Integer, ArrayList<Integer>>> pieceJumpAndRoute=new HashMap<>();
+        ArrayList<Piece> opposedPieces = isBlackTurn ? whiteMen : blackMen;
+        HashMap<Piece, HashMap<Integer, ArrayList<Integer>>> pieceJumpAndRoute = new HashMap<>();
         ArrayList<Integer> lastCaptures = new ArrayList<>();
         for (Piece piece : pieces) {
             if (piece.manCanJump(lastCaptures)) {
-                pieceJumpAndRoute.put(piece,piece.getUsedJumpDirection(piece.getPieceId(),lastCaptures));
-                piecesThatCanJump.add(piece);
+                pieceJumpAndRoute.put(piece, piece.getUsedJumpDirection(piece.getPieceId(), lastCaptures));
             }
         }
+        for (Piece piece: pieceJumpAndRoute.keySet()){
+            JumpNode jumpNode=new JumpNode(piece,piece.getPieceId(),new ArrayList<>(),null,this);
+            currentJumpsNode.add(jumpNode);
+            if(forcedPieceBiggestJumpSequence) {
+                jumpNode.findLongestRoute(jumpNode);
+            }
+            findSquareByPiece(piece).markPieceCanMove();
 
-        // Mark those pieces on the board
-    for (Piece piece:pieceJumpAndRoute.keySet()) {
-        Square square = findSquareByPiece(piece);
-            square.markPieceCanMove();
-            piece.getPieceButton().setOnClickListener(v-> {
-                cleanAllPiecePossibleMovementsMarkers();
-                for (Integer capturedSquareIndex : pieceJumpAndRoute.get(piece).keySet()) {
-                    Square capturedSquare = findSquareById(capturedSquareIndex);
-                    capturedSquare.squarePossibleMarkerSquare(R.drawable.willbeeaten);
-                    capturedSquare.getPossibleMovesMarks().setClickable(false);
-                    for (Integer landingSquareIndex : pieceJumpAndRoute.get(piece).get(capturedSquareIndex)) {
-                        Square landingSquare = findSquareById(landingSquareIndex);
-                        landingSquare.squarePossibleMarkerSquare(R.drawable.canlandafterjumpsquare);
-                        landingSquare.getPossibleMovesMarks().setOnClickListener(v1 -> {
-                            opposedPieces.remove(capturedSquare.getPiece());
-                            capturedSquare.removePiece();
-                            square.removePiece();
-                            pieces.remove(piece);
-                            if( landingSquare.getId()/boardSideLength == (isBlackTurn?0:boardSideLength-1))piece.upgradePiece();
-                            landingSquare.setPiece(piece);
-                            pieces.add(landingSquare.getPiece());
-                            nextTurn();
-                        });
-                    }
-
-                }
+            piece.getPieceButton().setOnClickListener(v->{
+                hideAllMovementsMarkersInvisible();
+                jumpNode.markJumpNode();
             });
 
-
         }
-
-        return !piecesThatCanJump.isEmpty();
+        return !pieceJumpAndRoute.isEmpty();
     }
+
 
 
     public Square findSquareById(int id) {
@@ -263,15 +241,11 @@ public class Checkers extends AppCompatActivity {
         }
     }
 
-    private void changeVisibilityAllPiecePossibleMovementsMarkers() {
+    private void hideAllMovementsMarkersInvisible() {
         for (Square square : chessBoardSquares) {
             if (square.getPossibleMovesMarks() != null) {
                 Button markButton = square.getPossibleMovesMarks();
-                if (markButton.getVisibility() == View.VISIBLE) {
-                    markButton.setVisibility(View.INVISIBLE);
-                } else {
-                    markButton.setVisibility(View.VISIBLE);
-                }
+                markButton.setVisibility(View.INVISIBLE);
             }
         }
     }
@@ -289,123 +263,3 @@ public class Checkers extends AppCompatActivity {
         }
     }
 }
-
-/**
- private JumpNode manJumpSequence(int currentIndex, ArrayList<Integer> jumpDirections, boolean isBlack, Integer doNotReturnSquare) {
- JumpNode jumpSequence = new JumpNode(currentIndex,(currentIndex+doNotReturnSquare)/2);
- for (Integer jumpDirection : jumpDirections) {
- int capturedSquareIndex = currentIndex + jumpDirection ;
- int landingIndex        = currentIndex + jumpDirection * 2;
-
- if (doNotReturnSquare == null || landingIndex != doNotReturnSquare) {
-
- if (allowedManJump(currentIndex, landingIndex, isBlack)) {
- JumpNode continuationSequence = manJumpSequence(
- landingIndex,
- jumpDirections,
- isBlack,
- currentIndex
- );
-
-
- continuationSequence.setParent(jumpSequence);
- if (jumpDirection == 1-boardSideLength ) {
-
- jumpSequence.setLeftUp(continuationSequence);
- }
- if (jumpDirection==boardSideLength-1) {
- jumpSequence.setLeftDown(continuationSequence);
- }
- if (jumpDirection== -boardSideLength-1) {
- jumpSequence.setRightUp(continuationSequence);
- }
- if (jumpDirection==boardSideLength+1){
- jumpSequence.setRightDown(continuationSequence);
- }
- }
- }
- }
- return jumpSequence;
- }
-
- private void makeJumpingSquare(@NonNull JumpNode jumpingNode) {
-
- Square landingSquare=findSquareById(jumpingNode.getStartingSquareIndex());
- landingSquare.squarePossibleMarkerSquare(R.drawable.canlandafterjumpsquare);
- landingSquare.getPossibleMovesMarks().setOnClickListener(v -> {
- JumpNode currentSquareInNode = jumpingNode;
- Square copyCurrentSquare = findSquareById(currentSquareInNode.getStartingSquareIndex());
- while (currentSquareInNode.getParent() != null
- && !findSquareById(currentSquareInNode.getParent().getStartingSquareIndex()).isOccupied()) {
- Toast.makeText(this,"copy currentSquare Id is "+jumpingNode.getStartingSquareIndex(),Toast.LENGTH_SHORT).show();
-
- Square capturedSquare=findSquareById(currentSquareInNode.getCapturedSquare());
- Piece piece = findSquareById(currentSquareInNode.getCapturedSquare()).getPiece();
- capturedSquare.removePiece();
-
- copyCurrentSquare.setPiece(piece);
- }
- Square capturedSquare=findSquareById(currentSquareInNode.getCapturedSquare());
- Piece piece = findSquareById(currentSquareInNode.getCapturedSquare()).getPiece();
- Toast.makeText(this,"currentSquareInNode is "+currentSquareInNode.getStartingSquareIndex(),Toast.LENGTH_SHORT).show();
-
- Toast.makeText(this,"the CapturedPiece Id is "+currentSquareInNode.getCapturedSquare(),Toast.LENGTH_SHORT).show();
- Toast.makeText(this,"the CapturedPiece color is "+(piece.getIsBlack()? "Black":"White"),Toast.LENGTH_SHORT).show();
-
-
- capturedSquare.removePiece();
-
- copyCurrentSquare.setPiece(piece);
-
- // Check if more jumps are possible
- if (piece.manCanJump(-1)) {
- cleanAllPieceCanMove();
- cleanAllPiecePossibleMovementsMarkers();
- copyCurrentSquare.markPieceCanMove();
-
- piece.getPieceButton().setClickable(true);
- piece.getPieceButton().setOnClickListener(v1 -> changeVisibilityAllPiecePossibleMovementsMarkers());
-
- markPossibleJumpingSquare(manJumpSequence(
- copyCurrentSquare.getId(),
- piece.getJumpDirection(),
- piece.getIsBlack(),
- capturedSquare.getId()
- ));
- } else {
- nextTurn();
- }
- });
- }
-
-
- private void makeEatAndCapturedSquare(JumpNode jumpingNodeContinuation){
- Square capturedSquare = findSquareById(jumpingNodeContinuation.getCapturedSquare());
- capturedSquare.squarePossibleMarkerSquare(R.drawable.willbeeaten);
- capturedSquare.getPossibleMovesMarks().setClickable(false);
- makeJumpingSquare(jumpingNodeContinuation);
- markPossibleJumpingSquare(jumpingNodeContinuation);
- }
-
- private void markPossibleJumpingSquare(JumpNode jumpingNode) {
- if (jumpingNode.getLeftDown() != null) {
- makeEatAndCapturedSquare(jumpingNode.getLeftDown());
- }
-
- if (jumpingNode.getLeftUp() != null) {
- makeEatAndCapturedSquare(jumpingNode.getLeftUp());
- }
-
- if (jumpingNode.getRightDown() != null) {
- makeEatAndCapturedSquare(jumpingNode.getRightDown());
- }
-
- if (jumpingNode.getRightUp() != null) {
- makeEatAndCapturedSquare(jumpingNode.getRightUp());
- }
- }
-
-
-
-
- */
